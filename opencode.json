@@ -19,5 +19,11 @@
         {"action": "test"}
       ]
     }
-  }
+  },
+  "rules": [
+    "After any code change that adds, removes, or modifies a feature, setting, or dependency, update README.md to reflect the change. Keep the Features list, install instructions, and requirements accurate."
+  ],
+  "preCommit": [
+    "Check if any files changed since last commit. If so, verify README.md is still accurate — update the Features section, screenshots block, install steps, or requirements as needed."
+  ]
 }
