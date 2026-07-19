@@ -21,13 +21,9 @@ mkdir -p "${INSTALL_DIR}"
 mkdir -p "${BIN_DIR}"
 mkdir -p "${SHARE_DIR}/applications"
 
-# icons dir might be owned by root; fall back to ~/.icons
-if [ -w "${SHARE_DIR}/icons" ]; then
-    ICON_DIR="${SHARE_DIR}/icons/hicolor/scalable/apps"
-else
-    ICON_DIR="${HOME}/.icons"
-fi
-mkdir -p "${ICON_DIR}"
+# Install icon to proper theme path (sudo since ~/.local/share/icons may be root-owned)
+ICON_DIR="${SHARE_DIR}/icons/hicolor/scalable/apps"
+sudo mkdir -p "${ICON_DIR}" 2>/dev/null || true
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
@@ -66,8 +62,13 @@ chmod +x "${BIN_DIR}/${APP_NAME}"
 echo -e "${BLUE}[4/5] Creating desktop entry...${NC}"
 cp "${SCRIPT_DIR}/resources/jcamera.desktop" "${SHARE_DIR}/applications/${APP_NAME}.desktop"
 sed -i "s|Exec=jcamera|Exec=${BIN_DIR}/${APP_NAME}|" "${SHARE_DIR}/applications/${APP_NAME}.desktop"
-sed -i "s|Icon=jcamera|Icon=${ICON_DIR}/${APP_NAME}.svg|" "${SHARE_DIR}/applications/${APP_NAME}.desktop"
-cp "${SCRIPT_DIR}/logo.svg" "${ICON_DIR}/${APP_NAME}.svg"
+sed -i "s|Icon=jcamera|Icon=${APP_NAME}|" "${SHARE_DIR}/applications/${APP_NAME}.desktop"
+sudo cp "${SCRIPT_DIR}/logo.svg" "${ICON_DIR}/${APP_NAME}.svg" 2>/dev/null || true
+rm -f "${HOME}/.icons/${APP_NAME}.svg" 2>/dev/null || true
+
+if command -v gtk-update-icon-cache &>/dev/null; then
+    sudo gtk-update-icon-cache "${SHARE_DIR}/icons/hicolor" 2>/dev/null || true
+fi
 
 echo -e "${BLUE}[5/5] Updating application cache...${NC}"
 if command -v update-desktop-database &>/dev/null; then
