@@ -42,9 +42,15 @@ else
     echo -e "${RED}Warning: Could not detect package manager. Install ffmpeg & python3 manually.${NC}"
 fi
 
+echo -e "${BLUE}[1b/5] Installing PyQt5 system package...${NC}"
+sudo apt install -y python3-pyqt5 2>/dev/null || true
+
 echo -e "${BLUE}[2/5] Setting up Python virtual environment...${NC}"
-python3 -m venv "${INSTALL_DIR}/venv"
-"${INSTALL_DIR}/venv/bin/pip" install --quiet PyQt5 opencv-python 2>&1 | tail -1 || true
+python3 -m venv --system-site-packages "${INSTALL_DIR}/venv"
+"${INSTALL_DIR}/venv/bin/pip" install --quiet opencv-python 2>&1 | tail -1 || true
+
+# Remove conflicting OpenCV Qt platform plugins
+rm -rf "${INSTALL_DIR}/venv/lib/python*/site-packages/cv2/qt/plugins" 2>/dev/null || true
 
 echo -e "${BLUE}[3/5] Installing application files...${NC}"
 cp -r "${SCRIPT_DIR}/jcamera" "${INSTALL_DIR}/"
