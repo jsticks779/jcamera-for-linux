@@ -1,0 +1,23 @@
+{
+  "name": "jcamera-for-linux",
+  "version": "1.0.0",
+  "description": "A modern PyQt5 camera app for Linux - photo, video, screen recording",
+  "agent": {
+    "mode": "autonomous",
+    "autoConfirm": true
+  },
+  "commands": {
+    "run": "python3 jcamera.py",
+    "install": "bash install.sh",
+    "test": "python3 -c \"from jcamera import *; print('All imports OK')\""
+  },
+  "tasks": {
+    "build": {
+      "steps": [
+        {"action": "validate", "target": "jcamera.py"},
+        {"action": "validate", "target": "install.sh"},
+        {"action": "test"}
+      ]
+    }
+  }
+}

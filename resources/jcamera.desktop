@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=JCamera
+Comment=Modern Camera App - Photo, Video & Screen Recording
+Exec=jcamera
+Icon=jcamera
+Terminal=false
+Type=Application
+Categories=Graphics;AudioVideo;Utility;
+StartupNotify=true

@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+*.log
+*.mkv
+*.mp4
+*.jpg
+*.png
+captures/
+dist/
+build/
+*.spec

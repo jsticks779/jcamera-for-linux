@@ -30,4 +30,3 @@ Then launch: `jcamera` or find "JCamera" in your app menu.
 - A camera (built-in or USB)
 
 Installed automatically by the install script.
-# jcamera-for-linux
