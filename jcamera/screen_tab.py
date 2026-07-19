@@ -3,7 +3,7 @@ import time
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
                              QLabel, QComboBox, QMessageBox,
                              QRubberBand, QApplication)
-from PyQt5.QtCore import Qt, QTimer, QRect, QPoint
+from PyQt5.QtCore import Qt, QTimer, QRect, QPoint, pyqtSignal
 from PyQt5.QtGui import QPixmap, QPainter, QColor, QPen, QFont
 
 from .utils import get_videos_dir, ffmpeg_screen_record, list_audio_sources, get_display_resolution
@@ -61,6 +61,8 @@ class RegionSelector(QWidget):
 
 
 class ScreenTab(QWidget):
+    status_message = pyqtSignal(str)
+
     def __init__(self, settings_getter):
         super().__init__()
         self._get_settings = settings_getter
@@ -201,6 +203,7 @@ class ScreenTab(QWidget):
 
         self._recording = True
         self._elapsed = 0
+        self.status_message.emit("Recording screen...")
         self.record_btn.setText("⏹  STOP")
         self.record_btn.setStyleSheet(
             "QPushButton { background: #ff4444; color: white; font-weight: bold; "
@@ -218,6 +221,7 @@ class ScreenTab(QWidget):
         self._elapsed_timer.stop()
         self.timer_label.setText("00:00")
         self.record_btn.setText("🔴  RECORD SCREEN")
+        self.status_message.emit("Screen recording saved")
         self.record_btn.setStyleSheet(
             "QPushButton { background: #e94560; color: white; font-weight: bold; "
             "border-radius: 8px; padding: 8px 24px; font-size: 14px; }"

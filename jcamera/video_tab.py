@@ -2,13 +2,15 @@ import os
 import time
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
                              QLabel, QComboBox, QMessageBox)
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtCore import Qt, QTimer, pyqtSignal
 from PyQt5.QtGui import QPixmap
 
 from .utils import get_videos_dir, ffmpeg_record_video, list_audio_sources
 
 
 class VideoTab(QWidget):
+    status_message = pyqtSignal(str)
+
     def __init__(self, camera_thread, settings_getter):
         super().__init__()
         self._camera = camera_thread
@@ -106,6 +108,7 @@ class VideoTab(QWidget):
 
         self._recording = True
         self._elapsed = 0
+        self.status_message.emit("Recording video...")
         self.record_btn.setText("⏹  STOP")
         self.record_btn.setStyleSheet(
             "QPushButton { background: #ff4444; color: white; font-weight: bold; "
@@ -124,6 +127,7 @@ class VideoTab(QWidget):
         self._elapsed_timer.stop()
         self.timer_label.setText("00:00")
         self.record_btn.setText("🔴  RECORD")
+        self.status_message.emit("Video recording saved")
         self.record_btn.setStyleSheet(
             "QPushButton { background: #e94560; color: white; font-weight: bold; "
             "border-radius: 8px; padding: 8px 24px; font-size: 14px; }"

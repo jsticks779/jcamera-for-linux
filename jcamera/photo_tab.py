@@ -1,14 +1,17 @@
 import os
 import time
+import subprocess
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
                              QLabel, QFileDialog, QMessageBox)
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtCore import Qt, QTimer, pyqtSignal
 from PyQt5.QtGui import QPixmap
 
 from .utils import get_captures_dir, ffmpeg_capture_photo
 
 
 class PhotoTab(QWidget):
+    status_message = pyqtSignal(str)
+
     def __init__(self, camera_thread, settings_getter):
         super().__init__()
         self._camera = camera_thread
@@ -130,6 +133,7 @@ class PhotoTab(QWidget):
         device = f"/dev/video{self._camera.device}" if isinstance(self._camera.device, int) \
                  else self._camera.device
 
+        self.status_message.emit("Capturing photo...")
         ffmpeg_capture_photo(
             device, filepath,
             width=settings["width"],
@@ -137,11 +141,15 @@ class PhotoTab(QWidget):
             quality=settings["quality"]
         )
 
-        pixmap = QPixmap(filepath)
-        if not pixmap.isNull():
-            self.last_photo_label.setPixmap(
-                pixmap.scaled(120, 90, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-            )
+        if os.path.exists(filepath) and os.path.getsize(filepath) > 1000:
+            pixmap = QPixmap(filepath)
+            if not pixmap.isNull():
+                self.last_photo_label.setPixmap(
+                    pixmap.scaled(120, 90, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                )
+            self.status_message.emit(f"Photo saved: {filename}")
+        else:
+            self.status_message.emit("Photo capture failed")
 
     def set_preview(self, qimage):
         pixmap = QPixmap.fromImage(qimage)

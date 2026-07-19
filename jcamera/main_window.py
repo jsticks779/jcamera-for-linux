@@ -106,6 +106,10 @@ class MainWindow(QMainWindow):
         self.video_tab = VideoTab(self._camera, self._get_video_settings)
         self.screen_tab = ScreenTab(self._get_screen_settings)
 
+        self.photo_tab.status_message.connect(self.status_label.setText)
+        self.video_tab.status_message.connect(self.status_label.setText)
+        self.screen_tab.status_message.connect(self.status_label.setText)
+
         self.tabs.addWidget(self.photo_tab)
         self.tabs.addWidget(self.video_tab)
         self.tabs.addWidget(self.screen_tab)

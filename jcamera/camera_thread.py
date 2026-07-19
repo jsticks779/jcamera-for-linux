@@ -16,7 +16,6 @@ class CameraThread(QThread):
         self.height = 720
         self.fps = 30
         self._running = False
-        self._cap = None
         self._flip_h = False
         self._flip_v = False
         self._apply_filter = None
@@ -98,7 +97,8 @@ class CameraThread(QThread):
             rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             h, w, ch = rgb.shape
             bytes_per_line = ch * w
-            qimg = QImage(rgb.data, w, h, bytes_per_line, QImage.Format_RGB888)
-            self.frame_ready.emit(qimg.copy())
+            data = rgb.tobytes()
+            qimg = QImage(data, w, h, bytes_per_line, QImage.Format_RGB888)
+            self.frame_ready.emit(qimg)
 
         cap.release()
