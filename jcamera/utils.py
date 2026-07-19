@@ -23,7 +23,7 @@ def get_videos_dir():
 
 def list_cameras():
     result = []
-    for dev in Path("/dev").glob("video*"):
+    for dev in sorted(Path("/dev").glob("video*"), key=lambda p: int(p.name.replace("video", ""))):
         try:
             out = subprocess.check_output(
                 ["v4l2-ctl", "--list-formats", "--device", str(dev)],

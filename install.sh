@@ -21,16 +21,8 @@ mkdir -p "${INSTALL_DIR}"
 mkdir -p "${BIN_DIR}"
 mkdir -p "${SHARE_DIR}/applications"
 
-# Install icon to ~/.icons (always user-writable, GNOME reads it)
-ICON_DIR="${HOME}/.icons/hicolor/scalable/apps"
-ICON_THEME="${HOME}/.icons/hicolor"
-mkdir -p "${ICON_DIR}"
-cat > "${ICON_THEME}/index.theme" 2>/dev/null << 'EOF'
-[Icon Theme]
-Name=Hicolor
-Comment=Fallback icon theme
-Directories=scalable/apps
-EOF
+# Icon goes alongside the app (avoids root-owned icon dirs)
+ICON_PATH="${INSTALL_DIR}/logo.svg"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
@@ -69,14 +61,7 @@ chmod +x "${BIN_DIR}/${APP_NAME}"
 echo -e "${BLUE}[4/5] Creating desktop entry...${NC}"
 cp "${SCRIPT_DIR}/resources/jcamera.desktop" "${SHARE_DIR}/applications/${APP_NAME}.desktop"
 sed -i "s|Exec=jcamera|Exec=${BIN_DIR}/${APP_NAME}|" "${SHARE_DIR}/applications/${APP_NAME}.desktop"
-sed -i "s|Icon=jcamera|Icon=${APP_NAME}|" "${SHARE_DIR}/applications/${APP_NAME}.desktop"
-cp "${SCRIPT_DIR}/logo.svg" "${ICON_DIR}/${APP_NAME}.svg"
-rm -f "${HOME}/.icons/${APP_NAME}.svg" 2>/dev/null || true
-rm -f "${SHARE_DIR}/icons/hicolor/scalable/apps/${APP_NAME}.svg" 2>/dev/null || true
-
-if command -v gtk-update-icon-cache &>/dev/null; then
-    gtk-update-icon-cache -f "${HOME}/.icons/hicolor" 2>/dev/null || true
-fi
+sed -i "s|Icon=jcamera|Icon=${ICON_PATH}|" "${SHARE_DIR}/applications/${APP_NAME}.desktop"
 
 echo -e "${BLUE}[5/5] Updating application cache...${NC}"
 if command -v update-desktop-database &>/dev/null; then

@@ -7,3 +7,4 @@ Terminal=false
 Type=Application
 Categories=Graphics;AudioVideo;Utility;
 StartupNotify=true
+StartupWMClass=JCamera

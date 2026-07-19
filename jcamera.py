@@ -11,6 +11,9 @@ from jcamera.main_window import MainWindow, STYLESHEET
 
 def main():
     app = QApplication(sys.argv)
+    app.setApplicationName("JCamera")
+    app.setApplicationDisplayName("JCamera")
+    app.setDesktopFileName("jcamera")
     app.setStyleSheet(STYLESHEET)
 
     font = QFont("Segoe UI", 10)
