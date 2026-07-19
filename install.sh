@@ -100,4 +100,4 @@ disown
 
 sleep 1
 echo -e "${GREEN}JCamera is now running!${NC}"
-echo -e "Launch again anytime with: ${BLUE}jcamera${NC}"
+echo -e "Launch again anytime with: ${BLUE}jcamera${NC} or from your app menu: ${BLUE}JCamera${NC}"
