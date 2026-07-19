@@ -54,6 +54,10 @@ cp "${SCRIPT_DIR}/logo.svg" "${INSTALL_DIR}/"
 
 cat > "${BIN_DIR}/${APP_NAME}" << 'PYEOF'
 #!/usr/bin/env bash
+export QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-xcb}"
+if [ "$XDG_SESSION_TYPE" = "wayland" ]; then
+    export QT_QPA_PLATFORM="wayland"
+fi
 exec "${HOME}/.local/jcamera/venv/bin/python3" "${HOME}/.local/jcamera/jcamera.py" "$@"
 PYEOF
 chmod +x "${BIN_DIR}/${APP_NAME}"
