@@ -1,7 +1,8 @@
 import os
 import time
+import subprocess
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
-                             QLabel, QComboBox, QMessageBox)
+                             QLabel, QComboBox)
 from PyQt5.QtCore import Qt, QTimer, pyqtSignal
 from PyQt5.QtGui import QPixmap
 
@@ -18,6 +19,7 @@ class VideoTab(QWidget):
         self._recording = False
         self._process = None
         self._elapsed = 0
+        self._last_video_path = None
         self._setup_ui()
         self._update_audio_sources()
 
@@ -51,9 +53,10 @@ class VideoTab(QWidget):
         self.timer_label.setFixedWidth(100)
         controls.addWidget(self.timer_label)
 
-        self.record_btn = QPushButton("🔴  RECORD")
+        self.record_btn = QPushButton("RECORD")
         self.record_btn.setFixedHeight(48)
         self.record_btn.setMinimumWidth(200)
+        self.record_btn.setStyleSheet(self._record_btn_style(False))
         controls.addWidget(self.record_btn)
 
         controls.addStretch()
@@ -71,8 +74,20 @@ class VideoTab(QWidget):
 
         self._elapsed_timer = QTimer()
         self._elapsed_timer.timeout.connect(self._update_elapsed)
-
         self.record_btn.clicked.connect(self._toggle_recording)
+
+    def _record_btn_style(self, recording):
+        if recording:
+            return (
+                "QPushButton { background: #ff4444; color: white; font-weight: bold; "
+                "border-radius: 8px; padding: 8px 24px; font-size: 14px; }"
+                "QPushButton:hover { background: #cc0000; }"
+            )
+        return (
+            "QPushButton { background: #e94560; color: white; font-weight: bold; "
+            "border-radius: 8px; padding: 8px 24px; font-size: 14px; }"
+            "QPushButton:hover { background: #e94560dd; }"
+        )
 
     def _update_audio_sources(self):
         self.audio_combo.clear()
@@ -91,10 +106,15 @@ class VideoTab(QWidget):
         timestamp = int(time.time())
         filename = f"video_{timestamp}.mkv"
         filepath = os.path.join(get_videos_dir(), filename)
+        self._last_video_path = filepath
 
-        device = f"/dev/video{self._camera.device}" if isinstance(self._camera.device, int) \
-                 else self._camera.device
+        self.status_message.emit("Starting camera release for recording...")
 
+        # Stop camera thread so ffmpeg can access the device
+        if self._camera.isRunning():
+            self._camera.stop_camera()
+
+        device = self._camera.device_path
         audio = self.audio_combo.currentData() if settings["record_audio"] else None
 
         self._process = ffmpeg_record_video(
@@ -109,35 +129,49 @@ class VideoTab(QWidget):
         self._recording = True
         self._elapsed = 0
         self.status_message.emit("Recording video...")
-        self.record_btn.setText("⏹  STOP")
-        self.record_btn.setStyleSheet(
-            "QPushButton { background: #ff4444; color: white; font-weight: bold; "
-            "border-radius: 8px; padding: 8px 24px; font-size: 14px; }"
-            "QPushButton:hover { background: #cc0000; }"
-        )
+        self.record_btn.setText("STOP")
+        self.record_btn.setStyleSheet(self._record_btn_style(True))
         self._elapsed_timer.start(1000)
 
     def _stop_recording(self):
         if self._process:
             self._process.terminate()
-            self._process.wait()
+            try:
+                self._process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                self._process.kill()
+                self._process.wait()
             self._process = None
 
         self._recording = False
         self._elapsed_timer.stop()
         self.timer_label.setText("00:00")
-        self.record_btn.setText("🔴  RECORD")
-        self.status_message.emit("Video recording saved")
-        self.record_btn.setStyleSheet(
-            "QPushButton { background: #e94560; color: white; font-weight: bold; "
-            "border-radius: 8px; padding: 8px 24px; font-size: 14px; }"
-            "QPushButton:hover { background: #e94560dd; }"
-        )
+        self.record_btn.setText("RECORD")
+        self.record_btn.setStyleSheet(self._record_btn_style(False))
+
+        # Restart camera thread
+        if not self._camera.isRunning():
+            self._camera.start_camera()
+
+        if self._last_video_path and os.path.exists(self._last_video_path):
+            size = os.path.getsize(self._last_video_path)
+            if size > 10000:
+                self.status_message.emit(f"Video saved: {os.path.basename(self._last_video_path)}")
+                self.last_video_label.setText("Saved")
+            else:
+                self.status_message.emit("Video file too small, may have failed")
+                self.last_video_label.setText("Failed")
+        else:
+            self.status_message.emit("Video recording stopped")
 
     def _update_elapsed(self):
         self._elapsed += 1
         m, s = divmod(self._elapsed, 60)
         self.timer_label.setText(f"{m:02d}:{s:02d}")
+
+    def stop_recording(self):
+        if self._recording:
+            self._stop_recording()
 
     def set_preview(self, qimage):
         pixmap = QPixmap.fromImage(qimage)
@@ -146,7 +180,3 @@ class VideoTab(QWidget):
             Qt.KeepAspectRatio, Qt.SmoothTransformation
         )
         self.preview_label.setPixmap(scaled)
-
-    def stop_recording(self):
-        if self._recording:
-            self._stop_recording()

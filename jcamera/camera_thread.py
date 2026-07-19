@@ -1,6 +1,8 @@
 import cv2
 import numpy as np
-from PyQt5.QtCore import QThread, pyqtSignal
+import os
+import subprocess
+from PyQt5.QtCore import QThread, pyqtSignal, QMutex, QMutexLocker
 from PyQt5.QtGui import QImage
 
 
@@ -8,6 +10,7 @@ class CameraThread(QThread):
     frame_ready = pyqtSignal(QImage)
     camera_error = pyqtSignal(str)
     camera_status = pyqtSignal(str)
+    photo_saved = pyqtSignal(str)
 
     def __init__(self):
         super().__init__()
@@ -19,6 +22,10 @@ class CameraThread(QThread):
         self._flip_h = False
         self._flip_v = False
         self._apply_filter = None
+        self._latest_frame = None
+        self._mutex = QMutex()
+        self._capture_requested = False
+        self._capture_path = ""
 
     def set_device(self, device):
         if isinstance(device, str) and device.startswith("/dev/"):
@@ -46,13 +53,19 @@ class CameraThread(QThread):
     def set_filter(self, filter_name):
         self._apply_filter = filter_name
 
+    def request_photo(self, filepath):
+        with QMutexLocker(self._mutex):
+            self._capture_requested = True
+            self._capture_path = filepath
+
     def start_camera(self):
         self._running = True
         self.start()
 
     def stop_camera(self):
         self._running = False
-        self.wait()
+        if not self.wait(3000):
+            self.camera_error.emit("Camera stop timed out")
 
     def run(self):
         cap = cv2.VideoCapture(self.device)
@@ -74,31 +87,59 @@ class CameraThread(QThread):
                 self.msleep(10)
                 continue
 
+            with QMutexLocker(self._mutex):
+                self._latest_frame = frame.copy()
+                if self._capture_requested:
+                    self._capture_requested = False
+                    self._save_photo(self._latest_frame, self._capture_path)
+
+            display_frame = frame.copy()
+
             if self._flip_h or self._flip_v:
                 flip_code = -1 if (self._flip_h and self._flip_v) else (1 if self._flip_h else 0)
-                frame = cv2.flip(frame, flip_code)
+                display_frame = cv2.flip(display_frame, flip_code)
 
-            if self._apply_filter == "grayscale":
-                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
-            elif self._apply_filter == "negative":
-                frame = cv2.bitwise_not(frame)
-            elif self._apply_filter == "edge":
-                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                edges = cv2.Canny(gray, 50, 150)
-                frame = cv2.cvtColor(edges, cv2.COLOR_GRAY2BGR)
-            elif self._apply_filter == "sepia":
-                sepia = np.array([[0.272, 0.534, 0.131],
-                                  [0.349, 0.686, 0.168],
-                                  [0.393, 0.769, 0.189]])
-                frame = cv2.transform(frame, sepia)
-                frame = np.clip(frame, 0, 255).astype(np.uint8)
+            if self._apply_filter:
+                display_frame = self._apply_filter_to(display_frame)
 
-            rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            rgb = cv2.cvtColor(display_frame, cv2.COLOR_BGR2RGB)
             h, w, ch = rgb.shape
-            bytes_per_line = ch * w
             data = rgb.tobytes()
-            qimg = QImage(data, w, h, bytes_per_line, QImage.Format_RGB888)
+            qimg = QImage(data, w, h, ch * w, QImage.Format_RGB888)
             self.frame_ready.emit(qimg)
 
         cap.release()
+
+    def _save_photo(self, frame, path):
+        try:
+            if self._apply_filter:
+                frame = self._apply_filter_to(frame)
+            cv2.imwrite(path, frame, [cv2.IMWRITE_JPEG_QUALITY, 95])
+            if os.path.exists(path) and os.path.getsize(path) > 1000:
+                self.photo_saved.emit(os.path.basename(path))
+            else:
+                self.camera_error.emit("Photo save failed")
+        except Exception as e:
+            self.camera_error.emit(f"Photo save error: {e}")
+
+    def _apply_filter_to(self, frame):
+        if self._apply_filter == "grayscale":
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            return cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
+        elif self._apply_filter == "negative":
+            return cv2.bitwise_not(frame)
+        elif self._apply_filter == "edge":
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            edges = cv2.Canny(gray, 50, 150)
+            return cv2.cvtColor(edges, cv2.COLOR_GRAY2BGR)
+        elif self._apply_filter == "sepia":
+            sepia = np.array([[0.272, 0.534, 0.131],
+                              [0.349, 0.686, 0.168],
+                              [0.393, 0.769, 0.189]])
+            result = cv2.transform(frame, sepia)
+            return np.clip(result, 0, 255).astype(np.uint8)
+        return frame
+
+    @property
+    def device_path(self):
+        return f"/dev/video{self.device}"

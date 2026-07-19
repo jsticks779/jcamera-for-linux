@@ -1,12 +1,11 @@
 import os
 import time
-import subprocess
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
-                             QLabel, QFileDialog, QMessageBox)
+                             QLabel)
 from PyQt5.QtCore import Qt, QTimer, pyqtSignal
 from PyQt5.QtGui import QPixmap
 
-from .utils import get_captures_dir, ffmpeg_capture_photo
+from .utils import get_captures_dir
 
 
 class PhotoTab(QWidget):
@@ -56,7 +55,7 @@ class PhotoTab(QWidget):
 
         controls.addStretch()
 
-        self.capture_btn = QPushButton("📷  CAPTURE")
+        self.capture_btn = QPushButton("CAPTURE")
         self.capture_btn.setFixedHeight(48)
         self.capture_btn.setMinimumWidth(200)
         self.capture_btn.setStyleSheet(self._button_style("#e94560"))
@@ -89,6 +88,7 @@ class PhotoTab(QWidget):
         self.capture_btn.clicked.connect(self._on_capture)
         self.timer_btn.clicked.connect(self._toggle_timer)
         self.timer_value_btn.clicked.connect(self._cycle_timer_value)
+        self._camera.photo_saved.connect(self._on_photo_saved)
 
     def _toggle_timer(self):
         self._timer_running = self.timer_btn.isChecked()
@@ -125,31 +125,21 @@ class PhotoTab(QWidget):
             self.timer_label.setText(str(self._timer_count))
 
     def _do_capture(self):
-        settings = self._get_settings()
         timestamp = int(time.time())
         filename = f"photo_{timestamp}.jpg"
         filepath = os.path.join(get_captures_dir(), filename)
-
-        device = f"/dev/video{self._camera.device}" if isinstance(self._camera.device, int) \
-                 else self._camera.device
-
+        self._captured_path = filepath
         self.status_message.emit("Capturing photo...")
-        ffmpeg_capture_photo(
-            device, filepath,
-            width=settings["width"],
-            height=settings["height"],
-            quality=settings["quality"]
-        )
+        self._camera.request_photo(filepath)
 
-        if os.path.exists(filepath) and os.path.getsize(filepath) > 1000:
-            pixmap = QPixmap(filepath)
+    def _on_photo_saved(self, filename):
+        self.status_message.emit(f"Photo saved: {filename}")
+        if hasattr(self, '_captured_path') and os.path.exists(self._captured_path):
+            pixmap = QPixmap(self._captured_path)
             if not pixmap.isNull():
                 self.last_photo_label.setPixmap(
                     pixmap.scaled(120, 90, Qt.KeepAspectRatio, Qt.SmoothTransformation)
                 )
-            self.status_message.emit(f"Photo saved: {filename}")
-        else:
-            self.status_message.emit("Photo capture failed")
 
     def set_preview(self, qimage):
         pixmap = QPixmap.fromImage(qimage)
