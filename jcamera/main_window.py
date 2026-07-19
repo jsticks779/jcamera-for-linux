@@ -10,7 +10,7 @@ from .settings_dialog import SettingsDialog
 from .photo_tab import PhotoTab
 from .video_tab import VideoTab
 from .screen_tab import ScreenTab
-from .utils import get_resource_path
+from .utils import get_resource_path, list_cameras
 
 
 STYLESHEET = """
@@ -44,11 +44,20 @@ class MainWindow(QMainWindow):
         if os.path.exists(logo_path):
             self.setWindowIcon(QIcon(logo_path))
 
+        # Auto-detect first camera
+        detected = list_cameras()
+        if detected:
+            cam_dev = detected[0][0]
+        else:
+            cam_dev = "/dev/video0"
+
         self._camera = CameraThread()
+        self._camera.set_device(cam_dev)
         self._camera.frame_ready.connect(self._on_frame)
         self._camera.camera_error.connect(self._on_camera_error)
         self._camera.camera_status.connect(self._on_camera_status)
 
+        self._cached_device = cam_dev
         self._settings_cache = {}
         self._setup_ui()
 
@@ -70,7 +79,7 @@ class MainWindow(QMainWindow):
 
         header.addStretch()
 
-        self.device_label = QLabel("Device: /dev/video0")
+        self.device_label = QLabel(f"Device: {self._cached_device}")
         self.device_label.setStyleSheet("color: #888; font-size: 12px;")
         header.addWidget(self.device_label)
 

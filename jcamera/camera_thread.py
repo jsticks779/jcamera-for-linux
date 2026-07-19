@@ -53,28 +53,26 @@ class CameraThread(QThread):
 
     def stop_camera(self):
         self._running = False
-        if self._cap:
-            self._cap.release()
-            self._cap = None
         self.wait()
 
     def run(self):
-        self._cap = cv2.VideoCapture(self.device)
-        if not self._cap.isOpened():
+        cap = cv2.VideoCapture(self.device)
+        if not cap.isOpened():
             self.camera_error.emit(f"Cannot open camera device {self.device}")
             return
 
-        self._cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
-        self._cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
-        self._cap.set(cv2.CAP_PROP_FPS, self.fps)
+        cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
+        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
+        cap.set(cv2.CAP_PROP_FPS, self.fps)
 
-        actual_w = int(self._cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        actual_h = int(self._cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        actual_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        actual_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         self.camera_status.emit(f"Camera: {actual_w}x{actual_h} @ {self.fps}fps")
 
-        while self._running and self._cap.isOpened():
-            ret, frame = self._cap.read()
+        while self._running:
+            ret, frame = cap.read()
             if not ret:
+                self.msleep(10)
                 continue
 
             if self._flip_h or self._flip_v:
@@ -103,5 +101,4 @@ class CameraThread(QThread):
             qimg = QImage(rgb.data, w, h, bytes_per_line, QImage.Format_RGB888)
             self.frame_ready.emit(qimg.copy())
 
-        if self._cap:
-            self._cap.release()
+        cap.release()

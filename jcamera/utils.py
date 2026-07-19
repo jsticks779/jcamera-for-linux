@@ -65,6 +65,7 @@ def ffmpeg_capture_photo(device, output_path, width=1280, height=720, quality=95
         "-i", device,
         "-vframes", "1",
         "-q:v", str(int((100 - quality) / 10)),
+        "-update", "1",
         output_path
     ]
     subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
