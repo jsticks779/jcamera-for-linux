@@ -77,9 +77,14 @@ echo -e "${GREEN}========================================${NC}"
 echo -e "${GREEN}  JCamera installed successfully!${NC}"
 echo -e "${GREEN}========================================${NC}"
 echo ""
-echo -e "Run:  ${BLUE}jcamera${NC}"
-echo -e "Or launch from your app menu: ${BLUE}JCamera${NC}"
+echo -e "${BLUE}Launching JCamera...${NC}"
 echo ""
-echo -e "${BLUE}Note:${NC} You may need to log out/in or run:"
-echo -e "  export PATH=\"\${PATH}:${BIN_DIR}\""
-echo ""
+
+# Run in background so terminal stays usable
+export PATH="${PATH}:${BIN_DIR}"
+nohup "${BIN_DIR}/${APP_NAME}" >/dev/null 2>&1 &
+disown
+
+sleep 1
+echo -e "${GREEN}JCamera is now running!${NC}"
+echo -e "Launch again anytime with: ${BLUE}jcamera${NC}"
