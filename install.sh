@@ -20,7 +20,14 @@ SHARE_DIR="${HOME}/.local/share"
 mkdir -p "${INSTALL_DIR}"
 mkdir -p "${BIN_DIR}"
 mkdir -p "${SHARE_DIR}/applications"
-mkdir -p "${SHARE_DIR}/icons/hicolor/scalable/apps"
+
+# icons dir might be owned by root; fall back to ~/.icons
+if [ -w "${SHARE_DIR}/icons" ]; then
+    ICON_DIR="${SHARE_DIR}/icons/hicolor/scalable/apps"
+else
+    ICON_DIR="${HOME}/.icons"
+fi
+mkdir -p "${ICON_DIR}"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
@@ -53,8 +60,8 @@ chmod +x "${BIN_DIR}/${APP_NAME}"
 echo -e "${BLUE}[4/5] Creating desktop entry...${NC}"
 cp "${SCRIPT_DIR}/resources/jcamera.desktop" "${SHARE_DIR}/applications/${APP_NAME}.desktop"
 sed -i "s|Exec=jcamera|Exec=${BIN_DIR}/${APP_NAME}|" "${SHARE_DIR}/applications/${APP_NAME}.desktop"
-sed -i "s|Icon=jcamera|Icon=${SHARE_DIR}/icons/hicolor/scalable/apps/${APP_NAME}.svg|" "${SHARE_DIR}/applications/${APP_NAME}.desktop"
-cp "${SCRIPT_DIR}/logo.svg" "${SHARE_DIR}/icons/hicolor/scalable/apps/${APP_NAME}.svg"
+sed -i "s|Icon=jcamera|Icon=${ICON_DIR}/${APP_NAME}.svg|" "${SHARE_DIR}/applications/${APP_NAME}.desktop"
+cp "${SCRIPT_DIR}/logo.svg" "${ICON_DIR}/${APP_NAME}.svg"
 
 echo -e "${BLUE}[5/5] Updating application cache...${NC}"
 if command -v update-desktop-database &>/dev/null; then
